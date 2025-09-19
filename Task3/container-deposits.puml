@@ -1,0 +1,59 @@
+@startuml
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+
+title Онлайн-открытие депозитов
+
+Person(client, "Клиент", "Физическое лицо, открывающее депозит через онлайн-каналы")
+
+System_Boundary(bank, "Банк 'Стандарт'") {
+    Container(WebSite, "Сайт", "PHP, React.js", "Предоставление информации о депозитах и приём заявок")
+    Container(InternetBank, "Интернет-банк", "ASP.NET, MS SQL", "Онлайн-сервис для существующих клиентов")
+    Container(ApiGw, "API-шлюз", ".NET", "Единая точка входа для внешних систем")
+    
+    Container(DepositsService, "Сервис депозитов", "Java Spring Boot", "Обработка заявок на открытие депозитов")
+    Container(RatesService, "Сервис ставок", "Java Spring Boot", "Управление и расчет процентных ставок")
+    ContainerDb(RatesDb, "База ставок", "MS SQL", "Хранение правил расчета и актуальных ставок")
+    
+    ContainerDb(ABS, "АБС", "Oracle, PL/SQL", "Автоматизированная банковская система")
+    Container(SmsGw, "СМС-шлюз", "Интеграция", "Отправка SMS-уведомлений клиентам")
+}
+
+Person(manager, "Менеджер бэк-офиса", "Сотрудник банка, обрабатывающий заявки")
+System_Ext(Telecom, "Телеком-оператор", "Внешний сервис отправки SMS")
+
+client --> WebSite: Просматривает ставки\nоставляет заявку (HTTPS)
+client --> InternetBank: Открывает депозит\nс SMS-подтверждением (HTTPS)
+
+WebSite --> ApiGw: Отправляет заявку (REST API)
+InternetBank --> ApiGw: Запрашивает ставки\nотправляет заявки (REST API)
+
+ApiGw --> RatesService: Запрашивает актуальные\nставки (REST API)
+ApiGw --> DepositsService: Создает заявки\nна депозиты (REST API)
+
+RatesService --> RatesDb: Чтение/запись\nправил расчета
+DepositsService --> ABS: Синхронизация данных\nчерез асинхронную очередь
+DepositsService --> SmsGw: Отправка уведомлений\nклиентам (API)
+
+manager --> ABS: Обрабатывает заявки\nчерез десктоп-клиент
+
+SmsGw --> Telecom: Отправка SMS-сообщений
+
+DepositsService --> RatesService: Запрос персональных\nставок для клиента
+
+note right of DepositsService
+  Асинхронная очередь для
+  интеграции с АБС вместо
+  прямого доступа к БД
+end note
+
+note right of RatesService
+  Централизованное управление
+  ставками с доступом для
+  всех бэк-офисов
+end note
+
+
+@enduml

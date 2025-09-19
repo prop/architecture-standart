@@ -1,0 +1,28 @@
+@startuml
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title Интеграция кол-центров с системой ставок
+
+Person(Client, "Клиент", "Звонит для консультации по депозитам")
+Person(Operator, "Оператор кол-центра", "Консультирует клиентов по ставкам")
+Person(Admin, "Администратор", "Управляет ставками банка")
+
+System(RatesService, "Сервис ставок", "Централизованное управление процентными ставками")
+
+System_Ext(BankCC, "Кол-центр банка", "Внутренняя система кол-центра")
+System_Ext(PartnerCC, "Партнерский кол-центр", "Внешняя система партнера")
+System_Ext(SFTP, "SFTP-сервер", "Сервер для обмена файлами")
+
+Client --> Operator: Консультация по телефону
+Operator --> BankCC: Просмотр актуальных ставок
+
+Admin --> RatesService: Обновление ставок
+
+BankCC --> RatesService: Запрос актуальных ставок (API)
+RatesService --> PartnerCC: Отправка файла со ставками (SFTP)
+RatesService --> SFTP: Выгрузка файла для партнера
+
+PartnerCC --> SFTP: Автоматическая загрузка файла
+
+@enduml
