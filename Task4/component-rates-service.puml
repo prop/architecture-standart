@@ -1,0 +1,54 @@
+@startuml
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Сервис управления ставками
+
+Container(RatesService, "Сервис ставок", "Java Spring Boot", "Централизованное управление процентными ставками") {
+
+    Component(ApiController, "REST API Controller", "Spring MVC", "Предоставляет API для внутренних систем\n- Получение актуальных ставок\n- Управление ставками (админ)")
+    
+    Component(AdminController, "Admin Controller", "Spring MVC", "Внутренний API для администраторов\nдля управления ставками")
+    
+    Component(SftpService, "SFTP Service", "Spring Integration", "Сервис выгрузки файлов со ставками\nдля партнерского кол-центра\n- Формирование файла\n- Шифрование\n- Отправка по SFTP")
+    
+    Component(RatesCalculationService, "Rates Calculation Service", "Java", "Ядро бизнес-логики\n- Расчет персональных ставок\n- Применение бизнес-правил")
+    
+    Component(RatesRepository, "Rates Repository", "Java", "Интерфейс доступа к данным о ставках")
+}
+
+ContainerDb(RatesDb, "База ставок", "MS SQL", "Хранение правил расчета, актуальных и исторических ставок")
+
+Container(BankCC, "Система кол-центра банка", "Java, PostgreSQL", "Внутренняя система кол-центра")
+Container(PartnerCC, "Система партнера", "Внешняя система", "Система партнерского кол-центра")
+
+System(SftpServer, "SFTP-сервер", "SFTP-сервер для обмена файлами")
+
+ApiController --> RatesCalculationService : uses
+AdminController --> RatesCalculationService : uses
+SftpService --> RatesCalculationService : uses
+RatesCalculationService --> RatesRepository : uses
+RatesRepository --> RatesDb : Чтение/запись
+
+ApiController --> BankCC : REST API (HTTPS)
+SftpService --> SftpServer : Выгружает файлы (SFTP)
+SftpServer --> PartnerCC : Скачивает файлы
+
+ApiController --> SftpService : Событие "Ставки обновлены"
+AdminController --> SftpService : Событие "Ставки обновлены"
+
+note right of SftpService
+  <b>Формат файла:</b>
+  JSON/CSV
+  Шифрование PGP
+  Выгрузка по расписанию
+  и по событию
+end note
+
+note left of ApiController
+  <b>Эндпоинты:</b>
+  GET /api/rates/current
+  GET /api/rates/personalized?clientId={}
+end note
+
+@enduml

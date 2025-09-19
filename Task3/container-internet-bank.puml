@@ -1,0 +1,40 @@
+@startuml
+
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+title Детализация интернет-банка и АБС
+
+Container(InternetBank, "Интернет-банк", "ASP.NET, MS SQL", "Онлайн-сервис для существующих клиентов") {
+    Component(Ui, "Web UI", "ASP.NET MVC", "Пользовательский интерфейс")
+    Component(Api, "API Layer", ".NET Web API", "Внутреннее API")
+    ComponentDb(Db, "База данных", "MS SQL", "Хранение сессий и кеша")
+}
+
+Container(Abs, "АБС", "Oracle, PL/SQL", "Автоматизированная банковская система") {
+    Component(Client, "Десктоп-клиент", "Delphi", "Интерфейс для сотрудников")
+    Component(Core, "Бизнес-логика", "PL/SQL", "Процедуры и пакеты БД")
+    ComponentDb(AbsDb, "База данных", "Oracle", "Основное хранилище данных")
+}
+
+Ui --> Api: Взаимодействие через\nвнутреннее API
+Api --> Db: Кеширование данных\nсессии пользователей
+
+Client --> Core: Вызов процедур\nи пакетов
+Core --> AbsDb: Работа с данными
+
+InternetBank --> Abs: Асинхронная интеграция\nчерез очередь сообщений
+
+note right of InternetBank
+  Прямое подключение к БД АБС
+  будет заменено на асинхронную
+  интеграцию через API GW
+end note
+
+note right of Abs
+  Только вертикальное
+  масштабирование
+  Требуется буферизация нагрузки
+end note
+
+@enduml
